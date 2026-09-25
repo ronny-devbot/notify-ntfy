@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "serverUrl": "https://ntfy.lan",
+  "priority": 3,
+  "topic": "all",
+  "token": null
+}
