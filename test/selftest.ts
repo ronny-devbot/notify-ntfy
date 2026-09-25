@@ -6,7 +6,7 @@
  *    posts using the config from PI_NTFY_CONFIG.
  */
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
@@ -16,6 +16,7 @@ interface Captured {
   title?: string;
   priority?: string;
   auth?: string;
+  click?: string;
   body: string;
 }
 
@@ -30,6 +31,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
       title: req.headers["title"] as string | undefined,
       priority: req.headers["priority"] as string | undefined,
       auth: req.headers["authorization"] as string | undefined,
+      click: req.headers["click"] as string | undefined,
       body,
     });
     res.end("ok");
@@ -62,7 +64,7 @@ writeFileSync(configPath, JSON.stringify({ enabled: true, serverUrl: base, topic
 process.env.PI_NTFY_CONFIG = configPath;
 
 const factory = (await import("../index.ts")).default;
-const handlers = new Map<string, (e: unknown) => void>();
+const handlers = new Map<string, (e: unknown, ctx?: unknown) => void>();
 const pi = {
   on: (event: string, handler: (e: unknown) => void) => {
     handlers.set(event, handler);
@@ -133,6 +135,96 @@ process.env.PI_NTFY_CONFIG = `${dir}/does-not-exist.json`;
 handlers.get("ui_prompt_start")!({ type: "ui_prompt_start", reason: "ui_prompt", kind: "custom" });
 await new Promise((r) => setTimeout(r, 50));
 assert.equal(received.length, 5, "missing config must not post");
+
+// --- 3. sessionLink resolves project/workspace/session like the server ----
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+
+const dataDir = `${dir}/pi-web-data`;
+mkdirSync(dataDir);
+const linkBase = "http://127.0.0.1:9999/";
+const sid = "11111111-2222-3333-4444-555555555555";
+process.env.PI_WEB_DATA_DIR = dataDir;
+process.env.PI_SESSION_ID = sid;
+const { sessionLink } = await import("../index.ts");
+const ws = (projectId: string, key: string) =>
+  createHash("sha1").update(`${projectId}:${key}`).digest("hex").slice(0, 12);
+const expectLink = (projectId: string, key: string, extra = "") =>
+  `${linkBase}?project=${projectId}&workspace=${ws(projectId, key)}&session=${sid}${extra}`;
+
+// Factory end-to-end under pi-web: the daemon process's cwd is NOT the
+// session workspace, so the link must come from the session context (ctx.cwd).
+// (Restore the config path clobbered by the missing-config check above; the
+// config is read per notification, so editing it takes effect on the
+// already-constructed instance without a restart.)
+process.env.PI_NTFY_CONFIG = configPath;
+writeFileSync(configPath, JSON.stringify({ enabled: true, serverUrl: base, topic: "all", piwebBaseUrl: linkBase }));
+
+const savedCwd = process.cwd();
+try {
+  // non-git project, session in the project directory
+  const plain = `${dir}/plain`;
+  mkdirSync(plain);
+  writeFileSync(`${dataDir}/projects.json`, JSON.stringify({ projects: [{ id: "p-plain", path: plain }] }));
+  process.chdir(plain);
+  assert.equal(sessionLink(linkBase), expectLink("p-plain", plain));
+
+  // git repo project: workspace key is the worktree root
+  const repo = `${dir}/repo`;
+  mkdirSync(repo, { recursive: true });
+  execFileSync("git", ["-C", repo, "init"], { stdio: "ignore" });
+  execFileSync("git", ["-C", repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "--allow-empty", "-m", "x"], { stdio: "ignore" });
+  const wt = `${dir}/worktree`;
+  execFileSync("git", ["-C", repo, "worktree", "add", "-b", "wt", wt], { stdio: "ignore" });
+  writeFileSync(
+    `${dataDir}/projects.json`,
+    JSON.stringify({ projects: [{ id: "p-repo", path: repo }, { id: "p-plain", path: plain }] }),
+  );
+  process.chdir(repo);
+  assert.equal(sessionLink(linkBase), expectLink("p-repo", repo), "repo checkout links to main worktree");
+  // session in a linked worktree: same project, workspace key = worktree path
+  process.chdir(wt);
+  assert.equal(sessionLink(linkBase), expectLink("p-repo", wt), "worktree session resolves via shared repo root");
+  // subdirectory session of a non-git project: still that project
+  const sub = `${plain}/sub`;
+  mkdirSync(sub);
+  process.chdir(sub);
+  assert.equal(sessionLink(linkBase), expectLink("p-plain", plain), "subdir session resolves to enclosing project");
+  // no project matches (e.g. plain directory outside any project)
+  const nowhere = `${dir}/nowhere`;
+  mkdirSync(nowhere);
+  process.chdir(nowhere);
+  assert.equal(sessionLink(linkBase), null);
+} finally {
+  process.chdir(savedCwd);
+}
+
+// ctx.cwd drives the link (pi-web: daemon cwd != session cwd). The config is
+// read per notification, so adding piwebBaseUrl to the existing config takes effect
+// on the already-constructed extension instance without a restart.
+const plainPath = `${dir}/plain`;
+handlers.get("ui_prompt_start")!({ type: "ui_prompt_start", reason: "ui_prompt", kind: "confirm", title: "Ctx cwd" }, { cwd: plainPath });
+await new Promise((r) => setTimeout(r, 100));
+assert.equal(received.length, 6);
+const link = expectLink("p-plain", plainPath);
+assert.equal(received[5].click, link, "Click header must use the session cwd from context");
+assert.equal(received[5].body, `test-session: confirm: Ctx cwd\n${link}`, "URL must also appear in the body");
+
+// no data dir / missing projects.json → null, no throw
+process.env.PI_WEB_DATA_DIR = `${dir}/no-such-dir`;
+assert.equal(sessionLink(linkBase), null);
+// no piwebBaseUrl → null
+writeFileSync(`${dataDir}/projects.json`, JSON.stringify({ projects: [] }));
+process.env.PI_WEB_DATA_DIR = dataDir;
+assert.equal(sessionLink(""), null);
+
+// postNtfy with a link sets the Click header
+received.length = 0;
+await postNtfy({ enabled: true, serverUrl: base, topic: "all" }, "T", "m", "http://x/?session=1");
+assert.equal(received[0].click, "http://x/?session=1");
+assert.equal(received.length, 1);
+
+delete process.env.PI_WEB_DATA_DIR;
 
 server.close();
 console.log("notify-ntfy self-test: PASS");

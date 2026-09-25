@@ -1,7 +1,8 @@
 {
   "enabled": true,
   "serverUrl": "https://ntfy.lan",
-  "priority": 3,
   "topic": "all",
-  "token": null
+  "token": null,
+  "priority": 3,
+  "piwebBaseUrl": "http://127.0.0.1:8504"
 }
