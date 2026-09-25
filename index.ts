@@ -8,6 +8,9 @@
  *                      being shown: the user must act.
  *   agent_settled    → the agent run is complete (settled after retries,
  *                      compaction, and queued continuations).
+ *   agent_start + tool_execution_end → pi-web's ask_user tool (posts browser
+ *                      questions, terminates the run, no ui_prompt_start) is
+ *                      detected so settlement reports "needs your input".
  *
  * Config: co-located config file in this extension's directory:
  *   <extension-dir>/config.json   { enabled, serverUrl, topic, token, priority }
@@ -79,6 +82,19 @@ export default function (pi: ExtensionAPI): void {
   const name = () => sessionName(pi);
   const prefix = () => (name() ? `${name()}: ` : "");
 
+  // pi-web's ask_user posts questions to the browser and terminates the run
+  // without a ui_prompt_start; a successful execution in this run means the
+  // browser is waiting. agent_start resets per run (answers wake a new run).
+  let browserWaiting = false;
+
+  pi.on("agent_start", () => {
+    browserWaiting = false;
+  });
+
+  pi.on("tool_execution_end", (e) => {
+    if (e.toolName === "ask_user" && !e.isError) browserWaiting = true;
+  });
+
   pi.on("ui_prompt_start", (e) => {
     const what = e.title ? `${e.kind}: ${e.title}` : `${e.kind} prompt`;
     // ASCII-only: HTTP headers are ByteStrings, fetch rejects non-Latin-1.
@@ -86,6 +102,9 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.on("agent_settled", () => {
-    notify("Pi - done", `${prefix()}agent run complete`);
+    notify(
+      browserWaiting ? "Pi - needs your input" : "Pi - done",
+      `${prefix()}${browserWaiting ? "questions posted - check the browser" : "agent run complete"}`,
+    );
   });
 }

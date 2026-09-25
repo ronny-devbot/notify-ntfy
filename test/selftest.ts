@@ -91,11 +91,48 @@ assert.equal(received[1].body, "test-session: confirm: Compact history?");
 assert.equal(received[2].title, "Pi - done");
 assert.equal(received[2].body, "test-session: agent run complete");
 
+// pi-web ask_user: successful execution → settlement reports browser-waiting
+handlers.get("agent_start")!({ type: "agent_start" });
+handlers.get("tool_execution_end")!({
+  type: "tool_execution_end",
+  toolCallId: "x",
+  toolName: "ask_user",
+  isError: false,
+  result: {},
+});
+handlers.get("agent_settled")!({ type: "agent_settled" });
+await new Promise((r) => setTimeout(r, 100));
+assert.equal(received.length, 4);
+assert.equal(received[3].title, "Pi - needs your input");
+assert.equal(received[3].body, "test-session: questions posted - check the browser");
+
+// rejected ask (isError) then a plain tool → back to "Pi - done"
+handlers.get("agent_start")!({ type: "agent_start" });
+handlers.get("tool_execution_end")!({
+  type: "tool_execution_end",
+  toolCallId: "y",
+  toolName: "ask_user",
+  isError: true,
+  result: {},
+});
+handlers.get("tool_execution_end")!({
+  type: "tool_execution_end",
+  toolCallId: "z",
+  toolName: "bash",
+  isError: false,
+  result: {},
+});
+handlers.get("agent_settled")!({ type: "agent_settled" });
+await new Promise((r) => setTimeout(r, 100));
+assert.equal(received.length, 5);
+assert.equal(received[4].title, "Pi - done");
+assert.equal(received[4].body, "test-session: agent run complete");
+
 // no config file → silent no-op, no throw
 process.env.PI_NTFY_CONFIG = `${dir}/does-not-exist.json`;
 handlers.get("ui_prompt_start")!({ type: "ui_prompt_start", reason: "ui_prompt", kind: "custom" });
 await new Promise((r) => setTimeout(r, 50));
-assert.equal(received.length, 3, "missing config must not post");
+assert.equal(received.length, 5, "missing config must not post");
 
 server.close();
 console.log("notify-ntfy self-test: PASS");

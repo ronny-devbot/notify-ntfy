@@ -10,12 +10,14 @@ terminal TUI and in pi-web, because it subscribes to pi's **built-in**
 | pi event | Notification |
 |---|---|
 | `ui_prompt_start` — any `ui.confirm` / `select` / `input` / `editor` / `custom` dialog opens (sandbox permission prompts, compaction confirm, …) | **Pi - needs your input** — `<session>: <kind>: <title>` |
-| `agent_settled` — agent run fully complete (after retries, compaction, queued continuations) | **Pi - done** — `<session>: agent run complete` |
+| `agent_settled` — agent run fully complete (after retries, compaction, queued continuations) | **Pi - done** — `<session>: agent run complete` — or **Pi - needs your input** when pi-web's `ask_user` posted questions |
 
 Known gaps (by design of pi core, not this plugin):
-- pi-web's built-in `ask_user` tool uses its own WebSocket channel (no
-  `ui_prompt_start`), but it terminates the run → you get "Pi — done",
-  which means "check the question in your browser".
+- pi-web's built-in `ask_user` tool posts questions over its own WebSocket
+  channel (no `ui_prompt_start`), but it runs through the normal tool
+  pipeline and terminates the run — the extension detects a successful
+  `ask_user` execution (`tool_execution_end`) and reports **Pi - needs your
+  input** (check the browser) on settlement.
 - The terminal trust dialog uses a separate unwrapped UI context → not
   emitted in TUI mode.
 
