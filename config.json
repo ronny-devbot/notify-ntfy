@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "serverUrl": "https://ntfy.lan",
-  "topic": "all",
-  "token": null,
-  "priority": 3,
+  "ntfyServerUrl": "https://ntfy.lan",
+  "ntfyTopic": "all",
+  "ntfyToken": null,
+  "ntfyPriority": 3,
   "piwebBaseUrl": "http://127.0.0.1:8504"
 }

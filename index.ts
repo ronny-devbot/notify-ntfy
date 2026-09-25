@@ -13,7 +13,8 @@
  *                      detected so settlement reports "needs your input".
  *
  * Config: co-located config file in this extension's directory:
- *   <extension-dir>/config.json   { enabled, serverUrl, topic, token, priority }
+ *   <extension-dir>/config.json   { enabled, ntfyServerUrl, ntfyTopic, ntfyToken,
+ *                                   ntfyPriority, piwebBaseUrl }
  * Override the path with PI_NTFY_CONFIG (also used by the self-test).
  * Missing file or enabled:false → plugin is a silent no-op.
  */
@@ -27,10 +28,10 @@ import { fileURLToPath } from "node:url";
 
 export interface NtfyConfig {
   enabled?: boolean;
-  serverUrl?: string;
-  topic?: string;
-  token?: string | null;
-  priority?: number;
+  ntfyServerUrl?: string;
+  ntfyTopic?: string;
+  ntfyToken?: string | null;
+  ntfyPriority?: number;
   /** pi-web address (e.g. http://127.0.0.1:8504). Set to link notifications to this session. */
   piwebBaseUrl?: string;
 }
@@ -129,14 +130,14 @@ export function sessionLink(piwebBaseUrl: string, cwd: string = process.cwd()): 
 /** POST one notification to ntfy. Explicit opt-in (enabled:true). Throws on failure — callers catch. */
 export async function postNtfy(cfg: NtfyConfig, title: string, message: string, link?: string): Promise<void> {
   if (cfg.enabled !== true) return;
-  if (!cfg.serverUrl || !cfg.topic) return;
+  if (!cfg.ntfyServerUrl || !cfg.ntfyTopic) return;
   const headers: Record<string, string> = {
     Title: title,
-    Priority: String(cfg.priority ?? 3),
+    Priority: String(cfg.ntfyPriority ?? 3),
   };
-  if (cfg.token) headers.Authorization = `Bearer ${cfg.token}`;
+  if (cfg.ntfyToken) headers.Authorization = `Bearer ${cfg.ntfyToken}`;
   if (link) headers.Click = link;
-  await fetch(`${cfg.serverUrl.replace(/\/+$/, "")}/${cfg.topic}`, {
+  await fetch(`${cfg.ntfyServerUrl.replace(/\/+$/, "")}/${cfg.ntfyTopic}`, {
     method: "POST",
     body: message,
     headers,

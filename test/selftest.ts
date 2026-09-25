@@ -43,7 +43,7 @@ const base = `http://127.0.0.1:${port}`;
 
 // --- 1. postNtfy posts the right request shape ---------------------------
 const { postNtfy } = await import("../index.ts");
-await postNtfy({ enabled: true, serverUrl: base, topic: "all", token: "sekret", priority: 4 }, "T", "m");
+await postNtfy({ enabled: true, ntfyServerUrl: base, ntfyTopic: "all", ntfyToken: "sekret", ntfyPriority: 4 }, "T", "m");
 assert.equal(received[0].method, "POST");
 assert.equal(received[0].url, "/all");
 assert.equal(received[0].title, "T");
@@ -52,15 +52,15 @@ assert.equal(received[0].auth, "Bearer sekret");
 assert.equal(received[0].body, "m");
 
 // disabled / incomplete configs are no-ops
-await postNtfy({ enabled: false, serverUrl: base, topic: "all" }, "T", "m");
-await postNtfy({ serverUrl: base, topic: "all" }, "T", "m");
-await postNtfy({ enabled: true, serverUrl: base }, "T", "m");
+await postNtfy({ enabled: false, ntfyServerUrl: base, ntfyTopic: "all" }, "T", "m");
+await postNtfy({ ntfyServerUrl: base, ntfyTopic: "all" }, "T", "m");
+await postNtfy({ enabled: true, ntfyServerUrl: base }, "T", "m");
 assert.equal(received.length, 1, "disabled/incomplete configs must not post");
 
 // --- 2. factory wires pi events to ntfy via the config file ---------------
 const dir = mkdtempSync(`${tmpdir()}/notify-ntfy-test-`);
 const configPath = `${dir}/config.json`;
-writeFileSync(configPath, JSON.stringify({ enabled: true, serverUrl: base, topic: "all", priority: 3 }));
+writeFileSync(configPath, JSON.stringify({ enabled: true, ntfyServerUrl: base, ntfyTopic: "all", ntfyPriority: 3 }));
 process.env.PI_NTFY_CONFIG = configPath;
 
 const factory = (await import("../index.ts")).default;
@@ -158,7 +158,7 @@ const expectLink = (projectId: string, key: string, extra = "") =>
 // config is read per notification, so editing it takes effect on the
 // already-constructed instance without a restart.)
 process.env.PI_NTFY_CONFIG = configPath;
-writeFileSync(configPath, JSON.stringify({ enabled: true, serverUrl: base, topic: "all", piwebBaseUrl: linkBase }));
+writeFileSync(configPath, JSON.stringify({ enabled: true, ntfyServerUrl: base, ntfyTopic: "all", piwebBaseUrl: linkBase }));
 
 const savedCwd = process.cwd();
 try {
@@ -220,7 +220,7 @@ assert.equal(sessionLink(""), null);
 
 // postNtfy with a link sets the Click header
 received.length = 0;
-await postNtfy({ enabled: true, serverUrl: base, topic: "all" }, "T", "m", "http://x/?session=1");
+await postNtfy({ enabled: true, ntfyServerUrl: base, ntfyTopic: "all" }, "T", "m", "http://x/?session=1");
 assert.equal(received[0].click, "http://x/?session=1");
 assert.equal(received.length, 1);
 
