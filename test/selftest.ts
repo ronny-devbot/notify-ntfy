@@ -208,7 +208,7 @@ await new Promise((r) => setTimeout(r, 100));
 assert.equal(received.length, 6);
 const link = expectLink("p-plain", plainPath);
 assert.equal(received[5].click, link, "Click header must use the session cwd from context");
-assert.equal(received[5].body, `test-session: confirm: Ctx cwd\n${link}`, "URL must also appear in the body");
+assert.equal(received[5].body, "test-session: confirm: Ctx cwd", "message body must not carry the URL");
 
 // no data dir / missing projects.json → null, no throw
 process.env.PI_WEB_DATA_DIR = `${dir}/no-such-dir`;

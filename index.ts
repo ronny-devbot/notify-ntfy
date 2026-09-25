@@ -158,10 +158,9 @@ export default function (pi: ExtensionAPI): void {
     // Config read per notification: cheap, and edits apply without a restart.
     const cfg = loadConfig();
     if (!cfg) return;
-    // Tappable link into pi-web (ntfy Click header) plus the URL in the body
-    // for clients without click support.
+    // Tappable link into pi-web via the ntfy Click header.
     const link = sessionLink(cfg.piwebBaseUrl ?? "", sessionCwd);
-    postNtfy(cfg, title, link ? `${message}\n${link}` : message, link).catch(() => {
+    postNtfy(cfg, title, message, link).catch(() => {
       /* fire-and-forget: a dead ntfy server must never block the agent */
     });
   };
