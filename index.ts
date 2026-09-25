@@ -2,13 +2,13 @@
  * notify-ntfy — minimal ntfy-only notification extension for pi.
  *
  * Subscribes to pi's built-in ExtensionRunner events (no third-party
- * broadcast contracts, no UI patching — works in TUI and pi-web alike):
+ * broadcast contracts, no UI patching — works in TUI and PI WEB alike):
  *
  *   ui_prompt_start  → some ui.confirm/select/input/editor/custom dialog is
  *                      being shown: the user must act.
  *   agent_settled    → the agent run is complete (settled after retries,
  *                      compaction, and queued continuations).
- *   agent_start + tool_execution_end → pi-web's ask_user tool (posts browser
+ *   agent_start + tool_execution_end → PI WEB's ask_user tool (posts browser
  *                      questions, terminates the run, no ui_prompt_start) is
  *                      detected so settlement reports "needs your input".
  *
@@ -32,7 +32,7 @@ export interface NtfyConfig {
   ntfyTopic?: string;
   ntfyToken?: string | null;
   ntfyPriority?: number;
-  /** pi-web address (e.g. http://127.0.0.1:8504). Set to link notifications to this session. */
+  /** PI WEB address (e.g. http://127.0.0.1:8504). Set to link notifications to this session. */
   piwebBaseUrl?: string;
 }
 
@@ -70,7 +70,7 @@ function gitInfo(dir: string, deadline: number): { top: string; common: string }
 }
 
 /**
- * Deep link into pi-web for this session, e.g.
+ * Deep link into PI WEB for this session, e.g.
  *   http://127.0.0.1:8504/?project=<id>&workspace=<12-hex>&session=<uuid>
  *
  * Mirrors the server's workspace model: projectId is the registered project
@@ -79,7 +79,7 @@ function gitInfo(dir: string, deadline: number): { top: string; common: string }
  * repo, else the project path. Returns null when it cannot be resolved.
  *
  * cwd must be the session's working directory, NOT process.cwd(): under
- * pi-web's embedded session daemon the agent runs inside the daemon process,
+ * PI WEB's embedded session daemon the agent runs inside the daemon process,
  * whose cwd is the daemon's home dir, not the session's workspace.
  */
 export function sessionLink(piwebBaseUrl: string, cwd: string = process.cwd()): string | null {
@@ -158,7 +158,7 @@ export default function (pi: ExtensionAPI): void {
     // Config read per notification: cheap, and edits apply without a restart.
     const cfg = loadConfig();
     if (!cfg) return;
-    // Tappable link into pi-web via the ntfy Click header.
+    // Tappable link into PI WEB via the ntfy Click header.
     const link = sessionLink(cfg.piwebBaseUrl ?? "", sessionCwd);
     postNtfy(cfg, title, message, link).catch(() => {
       /* fire-and-forget: a dead ntfy server must never block the agent */
@@ -168,13 +168,13 @@ export default function (pi: ExtensionAPI): void {
   const name = () => sessionName(pi);
   const prefix = () => (name() ? `${name()}: ` : "");
 
-  // pi-web's ask_user posts questions to the browser and terminates the run
+  // PI WEB's ask_user posts questions to the browser and terminates the run
   // without a ui_prompt_start; a successful execution in this run means the
   // browser is waiting. agent_start resets per run (answers wake a new run).
   let browserWaiting = false;
 
   // Session working directory: right as process.cwd() in TUI (the agent is
-  // spawned in the workspace), but under pi-web's embedded session daemon the
+  // spawned in the workspace), but under PI WEB's embedded session daemon the
   // runtime lives in the daemon process — take it from the session context.
   let sessionCwd = process.cwd();
   const trackCwd = (cwd?: string): void => {
