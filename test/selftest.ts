@@ -91,7 +91,7 @@ assert.equal(received.length, 3);
 assert.equal(received[1].title, "Pi - needs your input");
 assert.equal(received[1].body, "test-session: confirm: Compact history?");
 assert.equal(received[2].title, "Pi - done");
-assert.equal(received[2].body, "test-session: agent run complete");
+assert.equal(received[2].body, "test-session: agent settled");
 
 // pi-web ask_user: successful execution → settlement reports browser-waiting
 handlers.get("agent_start")!({ type: "agent_start" });
@@ -128,7 +128,7 @@ handlers.get("agent_settled")!({ type: "agent_settled" });
 await new Promise((r) => setTimeout(r, 100));
 assert.equal(received.length, 5);
 assert.equal(received[4].title, "Pi - done");
-assert.equal(received[4].body, "test-session: agent run complete");
+assert.equal(received[4].body, "test-session: agent settled");
 
 // no config file → silent no-op, no throw
 process.env.PI_NTFY_CONFIG = `${dir}/does-not-exist.json`;

@@ -10,7 +10,7 @@ terminal TUI and in PI WEB, because it subscribes to pi's **built-in**
 | pi event | Notification |
 |---|---|
 | `ui_prompt_start` — any `ui.confirm` / `select` / `input` / `editor` / `custom` dialog opens (sandbox permission prompts, compaction confirm, …) | **Pi - needs your input** — `<session>: <kind>: <title>` |
-| `agent_settled` — agent run fully complete (after retries, compaction, queued continuations) | **Pi - done** — `<session>: agent run complete` — or **Pi - needs your input** when PI WEB's `ask_user` posted questions |
+| `agent_settled` — agent run has ended, session is idle (after retries, compaction, queued continuations) | **Pi - done** — `<session>: agent settled` — or **Pi - needs your input** when PI WEB's `ask_user` posted questions |
 
 Known gaps (by design of pi core, not this plugin):
 - PI WEB's built-in `ask_user` tool posts questions over its own WebSocket

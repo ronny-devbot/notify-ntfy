@@ -6,8 +6,9 @@
  *
  *   ui_prompt_start  → some ui.confirm/select/input/editor/custom dialog is
  *                      being shown: the user must act.
- *   agent_settled    → the agent run is complete (settled after retries,
- *                      compaction, and queued continuations).
+ *   agent_settled    → the agent run has ended and the session is idle
+ *                      (settled after retries, compaction, and queued
+ *                      continuations).
  *   agent_start + tool_execution_end → PI WEB's ask_user tool (posts browser
  *                      questions, terminates the run, no ui_prompt_start) is
  *                      detected so settlement reports "needs your input".
@@ -204,7 +205,7 @@ export default function (pi: ExtensionAPI): void {
     trackCwd(ctx?.cwd);
     notify(
       browserWaiting ? "Pi - needs your input" : "Pi - done",
-      `${prefix()}${browserWaiting ? "questions posted - check the browser" : "agent run complete"}`,
+      `${prefix()}${browserWaiting ? "questions posted - check the browser" : "agent settled"}`,
     );
   });
 }
