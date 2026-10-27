@@ -1,0 +1,16 @@
+{
+  "name": "pi-notify-ntfy",
+  "version": "0.1.0",
+  "description": "pi extension: ntfy notifications when a pi session needs input or settles",
+  "keywords": [
+    "pi-package"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}

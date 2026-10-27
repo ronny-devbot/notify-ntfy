@@ -1,9 +1,13 @@
 # notify-ntfy
 
-Minimal ntfy-only notification extension for pi. Auto-loaded from
-`~/.pi/agent/extensions/` (no settings.json entry needed) — works in the
-terminal TUI and in PI WEB, because it subscribes to pi's **built-in**
-`ExtensionRunner` events rather than third-party broadcast contracts.
+Minimal ntfy-only notification extension for pi. Install as a pi package:
+
+```
+pi install git:github.com/ronny-devbot/notify-ntfy
+```
+
+It works in the terminal TUI and in PI WEB, because it subscribes to pi's
+**built-in** `ExtensionRunner` events rather than third-party broadcast contracts.
 
 ## What it notifies
 
